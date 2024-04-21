@@ -4,8 +4,8 @@ This is a project to understand how platforms like LeetCode, Codewars, and other
 
 ## TODO
 
-- [] Create server
-  - [] endpoint1 serve page where the user inputs the code for the solution
+- [x] Create server
+  - [x] endpoint1 serve page where the user inputs the code for the solution
   - [] endpoint2 receives the code to analyze
   - [] endpoint3 webhook to receive the results
 - [] Create a "container" space to execute the code
