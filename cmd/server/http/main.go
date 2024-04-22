@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ervitis/codenext/internal/input/core"
+	http2 "github.com/ervitis/codenext/internal/input/http"
 	"log"
 	"net/http"
 	"os"
@@ -29,21 +31,18 @@ func (h httpServer) ListenAndServe() error {
 	return nil
 }
 
-type endpoint struct {
-	method string
-	fn     http.HandlerFunc
-	mids   []func(http.HandlerFunc) http.HandlerFunc
-	path   string
-}
-
-func NewHttpServer(port string, endpoints ...endpoint) common.Listener {
+func NewHttpServer(port string, endpoints ...core.Endpoint) common.Listener {
 	r := http.NewServeMux()
 	for _, e := range endpoints {
 		var h http.HandlerFunc
-		for i := len(e.mids) - 1; i >= 0; i-- {
-			h = e.mids[i](e.fn)
+		if len(e.Middlewares()) > 0 {
+			for i := len(e.Middlewares()) - 1; i >= 0; i-- {
+				h = e.Middlewares()[i](e.Handler())
+			}
+		} else {
+			h = e.Handler()
 		}
-		r.HandleFunc(e.path, h)
+		r.HandleFunc(e.Path(), h)
 	}
 	srv := &http.Server{
 		Addr:              ":" + port,
@@ -65,7 +64,12 @@ func main() {
 
 	end := make(chan struct{}, 1)
 
-	srv := NewHttpServer("8080", []endpoint{}...)
+	srv := NewHttpServer(
+		"8080",
+		[]core.Endpoint{
+			http2.NewServerExercisePage(),
+		}...,
+	)
 	go func() {
 		log.Printf("serving http on port: %v", "8080")
 		if err := srv.ListenAndServe(); err != nil {
