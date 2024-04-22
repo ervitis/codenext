@@ -24,7 +24,7 @@ func (s serveExercisePage) Handler() http.HandlerFunc {
 	html := `
 <html>
     <head>
-    <title></title>
+    <title>Codenext submit</title>
     </head>
     <body>
         <h2 style="text-align: center;">Codenext</h2>
