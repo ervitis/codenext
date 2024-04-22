@@ -8,6 +8,7 @@ This is a project to understand how platforms like LeetCode, Codewars, and other
   - [x] endpoint1 serve page where the user inputs the code for the solution
   - [] endpoint2 receives the code to analyze
   - [] endpoint3 webhook to receive the results
+- [] ensure the code analysis and parser
 - [] Create a "container" space to execute the code
 - [] Code analytics
   - [] time execution
