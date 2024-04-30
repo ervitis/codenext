@@ -53,7 +53,7 @@ func (s serveAnalyzerPage) Handler() http.HandlerFunc {
 					},
 				},
 				HostConfigModifier: func(cfg *container.HostConfig) {
-					cfg.Binds = append(cfg.Binds, absPath+":/app/results")
+					cfg.Binds = append(cfg.Binds, filepath.Join(absPath, "exercises")+":/app/results")
 				},
 				Cmd: []string{"bash", "-c", "/app/executor.sh"},
 			},
