@@ -112,3 +112,9 @@ fabric.properties
 # Built Visual Studio Code Extensions
 *.vsix
 
+def main():
+	# Write your code here
+	print("hello")
+
+if __name__ == "__main__":
+	main()
