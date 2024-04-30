@@ -68,6 +68,7 @@ func main() {
 		"8080",
 		[]core.Endpoint{
 			http2.NewServerExercisePage(),
+			http2.NewServerAnalyzerPage(),
 		}...,
 	)
 	go func() {

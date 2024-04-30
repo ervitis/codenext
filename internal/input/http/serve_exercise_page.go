@@ -1,9 +1,10 @@
 package http
 
 import (
-	"github.com/ervitis/codenext/internal/input/core"
 	"html/template"
 	"net/http"
+
+	"github.com/ervitis/codenext/internal/input/core"
 )
 
 type serveExercisePage struct{}
@@ -21,6 +22,13 @@ func (s serveExercisePage) Method() string {
 }
 
 func (s serveExercisePage) Handler() http.HandlerFunc {
+	unresolvedExerciseCode := `def main():
+	# Write your code here
+	print("hello")
+
+if __name__ == "__main__":
+	main()`
+
 	html := `
 <html>
     <head>
@@ -29,19 +37,24 @@ func (s serveExercisePage) Handler() http.HandlerFunc {
     <body>
         <h2 style="text-align: center;">Codenext</h2>
         <form action="/resolve" method="POST">
-            <textarea cols="100" rows="50" name="exercise">Write your code test</textarea>
+            <textarea cols="100" rows="50" name="exercise">
+{{.ExerciseCode}}
+</textarea>
             <button type="submit">Solve exercise</button>
         </form>
     </body>
 </html>
 `
+	type data struct {
+		ExerciseCode string
+	}
 	return func(w http.ResponseWriter, r *http.Request) {
 		tmpl, err := template.New("exercise").Parse(html)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		_ = tmpl.Execute(w, nil)
+		_ = tmpl.Execute(w, data{ExerciseCode: unresolvedExerciseCode})
 	}
 }
 
