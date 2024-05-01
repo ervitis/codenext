@@ -1,8 +1,6 @@
 package http
 
 import (
-	"fmt"
-	"github.com/testcontainers/testcontainers-go/wait"
 	"io"
 	"log"
 	"net/http"
@@ -14,6 +12,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/ervitis/codenext/internal/input/core"
 	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 type serveAnalyzerPage struct{}
@@ -25,7 +24,6 @@ var (
 
 func (s serveAnalyzerPage) Handler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("ABSPATH", absPath)
 		if err := r.ParseForm(); err != nil {
 			log.Println(err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
