@@ -2,6 +2,7 @@ package http
 
 import (
 	"fmt"
+	"github.com/testcontainers/testcontainers-go/wait"
 	"io"
 	"log"
 	"net/http"
@@ -57,7 +58,8 @@ func (s serveAnalyzerPage) Handler() http.HandlerFunc {
 				HostConfigModifier: func(cfg *container.HostConfig) {
 					cfg.Binds = append(cfg.Binds, filepath.Join(absPath, "exercises")+":/app/results")
 				},
-				Cmd: []string{"bash", "-c", "/app/executor.sh"},
+				Cmd:        []string{"bash", "-c", "/app/executor.sh"},
+				WaitingFor: wait.ForLog("done"),
 			},
 		})
 		if err != nil {
