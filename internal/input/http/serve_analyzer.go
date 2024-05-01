@@ -1,6 +1,7 @@
 package http
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -23,6 +24,7 @@ var (
 
 func (s serveAnalyzerPage) Handler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("ABSPATH", absPath)
 		if err := r.ParseForm(); err != nil {
 			log.Println(err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
