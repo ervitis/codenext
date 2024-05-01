@@ -22,7 +22,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup rootless Docker
-        uses: ScribeMD/rootless-docker@v0.2.2
+        uses: ScribeMD/rootless-docker@0.2.2
 
       - name: Remove Docker root socket
         run: sudo rm -rf /var/run/docker.sock
