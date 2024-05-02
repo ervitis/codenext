@@ -10,6 +10,7 @@ This is a project to understand how platforms like LeetCode, Codewars, and other
   - [] endpoint3 webhook to receive the results
 - [x] ensure the code analysis and parser
 - [x] Create a "container" space to execute the code
+- [] Create a work pool to execute the container instead in the endpoint
 - [] Code analytics
   - [] time execution
   - [] memory used
