@@ -8,3 +8,5 @@ type Endpoint interface {
 	Path() string
 	Method() string
 }
+
+const CallbackUrl = "/results"

@@ -1,6 +1,7 @@
 package http
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestNewServerAnalyzerPage(t *testing.T) {
@@ -38,8 +40,8 @@ func Test_serveAnalyzerPage_Handler(t *testing.T) {
 		{
 			name: "page handler",
 			checker: func(rr *httptest.ResponseRecorder) error {
-				if rr.Code != http.StatusFound {
-					return fmt.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusFound)
+				if rr.Code != http.StatusAccepted {
+					return fmt.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusAccepted)
 				}
 				return nil
 			},
@@ -47,25 +49,34 @@ func Test_serveAnalyzerPage_Handler(t *testing.T) {
 		{
 			name: "create container and file to handle result",
 			checker: func(rr *httptest.ResponseRecorder) error {
-				if rr.Code != http.StatusFound {
-					return fmt.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusFound)
+				if rr.Code != http.StatusAccepted {
+					return fmt.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusAccepted)
 				}
-				// check file
-				info, err := os.Stat(filepath.Join(absPath, "exercises", "main.py"))
-				if err != nil && os.IsNotExist(err) {
-					return err
-				}
-				if err != nil {
-					return err
-				}
-				f, _ := os.Open(filepath.Join(absPath, "exercises", info.Name()))
-				defer f.Close()
-				b, _ := io.ReadAll(f)
-				if !strings.Contains(string(b), "hello test") {
-					return fmt.Errorf("file should contains hello test")
+				// check file with retrying
+				var allErrs error
+				for i := 0; i < 3; i++ {
+					info, terr := os.Stat(filepath.Join(absPath, "exercises", "main.py"))
+					if terr != nil && os.IsNotExist(terr) {
+						time.Sleep(1 * time.Second)
+					}
+					if terr != nil {
+						time.Sleep(1 * time.Second)
+					}
+					f, _ := os.Open(filepath.Join(absPath, "exercises", info.Name()))
+					defer f.Close()
+					b, _ := io.ReadAll(f)
+					if !strings.Contains(string(b), "hello test") {
+						return fmt.Errorf("file should contains hello test")
+					}
+					if terr != nil {
+						allErrs = errors.Join(terr)
+					} else {
+						allErrs = nil
+						break
+					}
 				}
 
-				return nil
+				return allErrs
 			},
 		},
 	}

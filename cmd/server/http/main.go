@@ -31,6 +31,18 @@ func (h httpServer) ListenAndServe() error {
 	return nil
 }
 
+func recoverMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				log.Println("recover from err:", err)
+				http.Redirect(w, r, "/exercise", http.StatusFound)
+			}
+		}()
+		next.ServeHTTP(w, r)
+	})
+}
+
 func NewHttpServer(port string, endpoints ...core.Endpoint) common.Listener {
 	r := http.NewServeMux()
 	for _, e := range endpoints {
@@ -46,10 +58,10 @@ func NewHttpServer(port string, endpoints ...core.Endpoint) common.Listener {
 	}
 	srv := &http.Server{
 		Addr:              ":" + port,
-		Handler:           r,
-		ReadTimeout:       10 * time.Second,
-		ReadHeaderTimeout: 15 * time.Second,
-		WriteTimeout:      15 * time.Second,
+		Handler:           recoverMiddleware(r),
+		ReadTimeout:       10 * time.Minute,
+		ReadHeaderTimeout: 15 * time.Minute,
+		WriteTimeout:      15 * time.Minute,
 		IdleTimeout:       time.Minute,
 	}
 
@@ -69,6 +81,7 @@ func main() {
 		[]core.Endpoint{
 			http2.NewServerExercisePage(),
 			http2.NewServerAnalyzerPage(),
+			http2.NewServerResultsPage(),
 		}...,
 	)
 	go func() {
