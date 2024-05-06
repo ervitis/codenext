@@ -52,7 +52,7 @@ func (s serveAnalyzerPage) Handler() http.HandlerFunc {
 		idExercise := idGenerator()
 		go s.createTask(context.Background(), r.FormValue("exercise"), idExercise)
 
-		http.Redirect(w, r, "/exercise", http.StatusFound)
+		http.Redirect(w, r, "/exercise", http.StatusAccepted)
 	}
 }
 
