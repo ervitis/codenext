@@ -1,13 +1,20 @@
 package http
 
 import (
+	"context"
+	cp "crypto/rand"
+	"github.com/ervitis/poolerchan"
 	"io"
 	"log"
+	"math/big"
+	"math/rand/v2"
 	"net/http"
 	"os"
 	"path"
 	"path/filepath"
 	"runtime"
+	"sync"
+	"time"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/ervitis/codenext/internal/input/core"
@@ -23,21 +30,52 @@ var (
 )
 
 func (s serveAnalyzerPage) Handler() http.HandlerFunc {
+	type response struct {
+		ID string `json:"id"`
+	}
+	idGenerator := func() string {
+		const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+		b := make([]byte, 16)
+		for i := range b {
+			n, _ := cp.Int(cp.Reader, big.NewInt(int64(len(charset))))
+			b[i] = charset[n.Int64()]
+		}
+		return string(b)
+	}
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := r.ParseForm(); err != nil {
 			log.Println(err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		rawCode := r.FormValue("exercise")
+
+		idExercise := idGenerator()
+		go s.createTask(context.Background(), r.FormValue("exercise"), idExercise)
+
+		http.Redirect(w, r, "/exercise", http.StatusFound)
+	}
+}
+
+func (s serveAnalyzerPage) createTask(ctx context.Context, code, ID string) {
+	type job struct {
+		ID   string
+		code string
+		isOk bool
+	}
+
+	queue := poolerchan.NewPoolchan(
+		poolerchan.WithNumberOfWorkers(1),
+		poolerchan.WithNumberOfJobs(1),
+	)
+
+	if err := queue.Queue(func(ctx context.Context) error {
 		f, err := os.Create(path.Join(absPath, "exercises", "main.py"))
 		if err != nil {
 			log.Println(err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+			return err
 		}
-		_, _ = f.WriteString(rawCode)
-		ctnr, err := testcontainers.GenericContainer(r.Context(), testcontainers.GenericContainerRequest{
+		_, _ = f.WriteString(code)
+		ctnr, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 			ContainerRequest: testcontainers.ContainerRequest{
 				Image:      "docker.io/library/python:3.12",
 				WorkingDir: "/app",
@@ -62,11 +100,10 @@ func (s serveAnalyzerPage) Handler() http.HandlerFunc {
 		})
 		if err != nil {
 			log.Println(err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+			return err
 		}
 		defer func() {
-			if resLog, err := ctnr.Logs(r.Context()); err != nil {
+			if resLog, err := ctnr.Logs(ctx); err != nil {
 				log.Println(err)
 			} else {
 				if logOut, err := os.Create(filepath.Join(absPath, "exercises", "log.out")); err != nil {
@@ -75,39 +112,69 @@ func (s serveAnalyzerPage) Handler() http.HandlerFunc {
 					_, _ = io.Copy(logOut, resLog)
 				}
 			}
-			_ = ctnr.Terminate(r.Context())
+			_ = ctnr.Terminate(ctx)
 		}()
-		if err := ctnr.Start(r.Context()); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		if err := ctnr.Start(ctx); err != nil {
 			log.Println(err)
-			return
+			return err
 		}
-		res, err := ctnr.CopyFileFromContainer(r.Context(), "/app/results/main.out")
+		res, err := ctnr.CopyFileFromContainer(ctx, "/app/results/main.out")
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
 			log.Println(err)
-			return
+			return err
 		}
 
 		out, err := os.OpenFile(filepath.Join(absPath, "exercises", "main.out"), os.O_TRUNC|os.O_WRONLY|os.O_CREATE, 0o600)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
 			log.Println(err)
-			return
+			return err
 		}
 		defer func() {
 			_ = out.Close()
 		}()
 		_, err = io.Copy(out, res)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			log.Println(err)
+			return err
+		}
+		wg := sync.WaitGroup{}
+		wg.Add(1)
+		go callbackReq(ctx, &wg)
+		wg.Wait()
+		return nil
+	}).Build().Execute(ctx); err != nil {
+		log.Println(err)
+		return
+	}
+}
+
+func callbackReq(ctx context.Context, wg *sync.WaitGroup) {
+	defer wg.Done()
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "http://localhost:8080/"+core.CallbackUrl, nil)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	client := &http.Client{
+		Timeout:   5 * time.Second,
+		Transport: http.DefaultTransport,
+	}
+
+	for i := 0; i < 3; i++ {
+		res, err := client.Do(req)
+		if err != nil || res.StatusCode > http.StatusInternalServerError {
+			time.Sleep(time.Duration(rand.IntN(4)+1) * time.Second)
+			continue
+		}
+		if res.StatusCode > http.StatusOK && res.StatusCode <= http.StatusInternalServerError {
 			log.Println(err)
 			return
 		}
-		r.PostForm.Set("exercise", rawCode)
-
-		http.Redirect(w, r, "/exercise", http.StatusFound)
+		_ = res.Body.Close()
+		break
 	}
+
 }
 
 func (s serveAnalyzerPage) Middlewares() []func(http.HandlerFunc) http.HandlerFunc {

@@ -38,8 +38,8 @@ func Test_serveAnalyzerPage_Handler(t *testing.T) {
 		{
 			name: "page handler",
 			checker: func(rr *httptest.ResponseRecorder) error {
-				if rr.Code != http.StatusFound {
-					return fmt.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusFound)
+				if rr.Code != http.StatusAccepted {
+					return fmt.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusAccepted)
 				}
 				return nil
 			},
@@ -47,8 +47,8 @@ func Test_serveAnalyzerPage_Handler(t *testing.T) {
 		{
 			name: "create container and file to handle result",
 			checker: func(rr *httptest.ResponseRecorder) error {
-				if rr.Code != http.StatusFound {
-					return fmt.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusFound)
+				if rr.Code != http.StatusAccepted {
+					return fmt.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusAccepted)
 				}
 				// check file
 				info, err := os.Stat(filepath.Join(absPath, "exercises", "main.py"))
